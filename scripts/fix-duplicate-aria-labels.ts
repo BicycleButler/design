@@ -12,7 +12,12 @@ function getAllFiles(dirPath: string, arrayOfFiles: string[] = []): string[] {
       if (file !== 'node_modules' && file !== '.next' && file !== 'dist' && file !== '.git') {
         arrayOfFiles = getAllFiles(fullPath, arrayOfFiles);
       }
-    } else if (file.endsWith('.tsx') || file.endsWith('.ts') || file.endsWith('.jsx') || file.endsWith('.js')) {
+    } else if (
+      file.endsWith('.tsx') ||
+      file.endsWith('.ts') ||
+      file.endsWith('.jsx') ||
+      file.endsWith('.js')
+    ) {
       arrayOfFiles.push(fullPath);
     }
   });
@@ -27,13 +32,16 @@ files.forEach((file) => {
   const original = content;
 
   // Fix duplicate aria-label attributes inside single JSX tags
-  content = content.replace(/(<[A-Za-z0-9_]+[^>]*)\b(aria-label="[^"]*")([^>]*)\b(aria-label="[^"]*")/g, (match, p1, p2, p3, p4) => {
-    // Keep the more specific aria-label if p2 is "Button action" or generic
-    if (p2.includes('Button action')) {
-      return `${p1}${p3} ${p4}`.replace(/\s+/g, ' ');
-    }
-    return `${p1} ${p2}${p3}`.replace(/\s+/g, ' ');
-  });
+  content = content.replace(
+    /(<[A-Za-z0-9_]+[^>]*)\b(aria-label="[^"]*")([^>]*)\b(aria-label="[^"]*")/g,
+    (match, p1, p2, p3, p4) => {
+      // Keep the more specific aria-label if p2 is "Button action" or generic
+      if (p2.includes('Button action')) {
+        return `${p1}${p3} ${p4}`.replace(/\s+/g, ' ');
+      }
+      return `${p1} ${p2}${p3}`.replace(/\s+/g, ' ');
+    },
+  );
 
   if (content !== original) {
     fs.writeFileSync(file, content, 'utf8');

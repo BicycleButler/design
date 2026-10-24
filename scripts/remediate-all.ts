@@ -11,7 +11,7 @@ const remediationScripts = [
   'remediate-badge-deprecation.ts',
   'remediate-static-colors.ts',
   'remediate-deterministic-fallbacks-and-a11y.ts',
-  'fix-duplicate-aria-labels.ts'
+  'fix-duplicate-aria-labels.ts',
 ];
 
 remediationScripts.forEach((scriptName) => {
@@ -20,7 +20,7 @@ remediationScripts.forEach((scriptName) => {
     console.log(`▶ Running ${scriptName}...`);
     try {
       execSync(`npx tsx "${scriptPath}" "${TARGET_DIR}"`, { stdio: 'inherit' });
-    } catch (err) {
+    } catch {
       console.error(`⚠️ Warning: Error executing ${scriptName}`);
     }
     console.log('');
@@ -28,4 +28,6 @@ remediationScripts.forEach((scriptName) => {
 });
 
 console.log('✅ Full Design System Remediation complete! Run audit to verify:');
-console.log(`   npx tsx ${path.join(SCRIPTS_DIR, 'audit-design-system-compliance.ts')} ${TARGET_DIR}\n`);
+console.log(
+  `   npx tsx ${path.join(SCRIPTS_DIR, 'audit-design-system-compliance.ts')} ${TARGET_DIR}\n`,
+);

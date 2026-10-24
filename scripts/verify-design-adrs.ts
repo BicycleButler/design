@@ -25,14 +25,18 @@ if (!fs.existsSync(DESIGN_DIR)) {
   process.exit(1);
 }
 
-const adrFiles = fs.readdirSync(DESIGN_DIR).filter(f => f.endsWith('.md') && f !== 'index.md');
+const adrFiles = fs.readdirSync(DESIGN_DIR).filter((f) => f.endsWith('.md') && f !== 'index.md');
 logSuccess(`Found ${adrFiles.length} design ADR files.`);
 
 // 2. Validate Frontmatter Status
-adrFiles.forEach(file => {
+adrFiles.forEach((file) => {
   const filePath = path.join(DESIGN_DIR, file);
   const content = fs.readFileSync(filePath, 'utf8');
-  if (!content.includes('status: "active"') && !content.includes("status: 'active'") && !content.includes('status: active')) {
+  if (
+    !content.includes('status: "active"') &&
+    !content.includes("status: 'active'") &&
+    !content.includes('status: active')
+  ) {
     logError(`${file}: Frontmatter status is not active.`);
   }
 });
@@ -41,11 +45,11 @@ adrFiles.forEach(file => {
 if (fs.existsSync(SKILL_MD)) {
   const skillContent = fs.readFileSync(SKILL_MD, 'utf8');
   const adrMatches = skillContent.matchAll(/ADR\s+(00\d{2})/g);
-  const citedAdrs = new Set([...adrMatches].map(m => m[1]));
+  const citedAdrs = new Set([...adrMatches].map((m) => m[1]));
 
-  citedAdrs.forEach(adrNum => {
+  citedAdrs.forEach((adrNum) => {
     if (adrNum === '0015') return; // ADR 0015 lives in knowledge/architecture/adr/
-    const found = adrFiles.some(f => f.startsWith(adrNum));
+    const found = adrFiles.some((f) => f.startsWith(adrNum));
     if (!found) {
       logError(`SKILL.md cites ADR ${adrNum}, but no matching file exists in knowledge/design/.`);
     }
@@ -59,13 +63,15 @@ if (fs.existsSync(SKILL_MD)) {
 if (fs.existsSync(INDEX_MD)) {
   const indexContent = fs.readFileSync(INDEX_MD, 'utf8');
   const indexMatches = indexContent.matchAll(/\[(00\d{2})[ -]/g);
-  const indexAdrs = new Set([...indexMatches].map(m => m[1]));
+  const indexAdrs = new Set([...indexMatches].map((m) => m[1]));
 
-  indexAdrs.forEach(adrNum => {
+  indexAdrs.forEach((adrNum) => {
     if (adrNum === '0015') return; // ADR 0015 lives in knowledge/architecture/adr/
-    const found = adrFiles.some(f => f.startsWith(adrNum));
+    const found = adrFiles.some((f) => f.startsWith(adrNum));
     if (!found) {
-      logError(`index.md references ADR ${adrNum}, but no matching file exists in knowledge/design/.`);
+      logError(
+        `index.md references ADR ${adrNum}, but no matching file exists in knowledge/design/.`,
+      );
     }
   });
   logSuccess(`index.md ADR references verified against disk.`);

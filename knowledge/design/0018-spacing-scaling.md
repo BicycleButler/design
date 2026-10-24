@@ -1,13 +1,15 @@
 ---
-title: "0018 - Spacing & Scaling System"
-type: "adr"
-description: "Accepted"
-status: "active"
-last_updated: "2026-07-18T18:35:00Z"
+title: '0018 - Spacing & Scaling System'
+type: 'adr'
+description: 'Accepted'
+status: 'active'
+last_updated: '2026-07-18T18:35:00Z'
 ---
+
 # 0018 - Spacing & Scaling System
 
 ## Context
+
 Ad-hoc spacing values (13px, 17px) produce visually inconsistent interfaces and make design reviews subjective. Without spacing system, UI density varies unpredictably across pages, and text truncation failures break responsive layouts.
 
 ## Decision

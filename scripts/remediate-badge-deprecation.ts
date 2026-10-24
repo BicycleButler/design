@@ -13,7 +13,12 @@ function getAllFiles(dirPath: string, arrayOfFiles: string[] = []): string[] {
       if (file !== 'node_modules' && file !== '.next' && file !== 'dist' && file !== '.git') {
         arrayOfFiles = getAllFiles(fullPath, arrayOfFiles);
       }
-    } else if (file.endsWith('.tsx') || file.endsWith('.ts') || file.endsWith('.jsx') || file.endsWith('.js')) {
+    } else if (
+      file.endsWith('.tsx') ||
+      file.endsWith('.ts') ||
+      file.endsWith('.jsx') ||
+      file.endsWith('.js')
+    ) {
       arrayOfFiles.push(fullPath);
     }
   });
@@ -59,7 +64,10 @@ function remediateBadgeInFile(filePath: string) {
   }
 
   // Also fix status dot patterns
-  newContent = newContent.replace(/w-2\s+h-2\s+rounded-full\s+bg-[a-z0-9-/]+/g, 'text-xs text-muted-foreground/60 font-medium');
+  newContent = newContent.replace(
+    /w-2\s+h-2\s+rounded-full\s+bg-[a-z0-9-/]+/g,
+    'text-xs text-muted-foreground/60 font-medium',
+  );
 
   if (modified) {
     fs.writeFileSync(filePath, newContent, 'utf8');

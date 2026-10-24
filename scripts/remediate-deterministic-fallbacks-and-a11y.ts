@@ -13,7 +13,12 @@ function getAllFiles(dirPath: string, arrayOfFiles: string[] = []): string[] {
       if (file !== 'node_modules' && file !== '.next' && file !== 'dist' && file !== '.git') {
         arrayOfFiles = getAllFiles(fullPath, arrayOfFiles);
       }
-    } else if (file.endsWith('.tsx') || file.endsWith('.ts') || file.endsWith('.jsx') || file.endsWith('.js')) {
+    } else if (
+      file.endsWith('.tsx') ||
+      file.endsWith('.ts') ||
+      file.endsWith('.jsx') ||
+      file.endsWith('.js')
+    ) {
       arrayOfFiles.push(fullPath);
     }
   });
@@ -49,7 +54,10 @@ function remediateFile(filePath: string): boolean {
   // 3. A11y icon buttons missing aria-label
   const lines = content.split('\n');
   const newLines = lines.map((line) => {
-    if (/<Button[^>]*size=["'](?:icon|icon-sm|icon-lg)["'][^>]*>/.test(line) && !line.includes('aria-label')) {
+    if (
+      /<Button[^>]*size=["'](?:icon|icon-sm|icon-lg)["'][^>]*>/.test(line) &&
+      !line.includes('aria-label')
+    ) {
       let label = '';
       if (line.includes('title=')) {
         const match = line.match(/title=["']([^"']+)["']/);

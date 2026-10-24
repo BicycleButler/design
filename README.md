@@ -10,7 +10,7 @@ description: A codebase-agnostic skill for applying design guidelines across any
 A codebase-agnostic skill for applying design guidelines across any UI project.
 
 - Installable via terminal
-- Source: https://github.com/Wiltermoodj/design
+- Source: https://github.com/BicycleButler/design
 - Format: Open Knowledge Format markdown
 
 ## Install
@@ -18,7 +18,7 @@ A codebase-agnostic skill for applying design guidelines across any UI project.
 Run the following command from the root of the project you want to install the skill into:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Wiltermoodj/design/main/scripts/install-design-skill.sh | bash
+curl -fsSL https://raw.githubusercontent.com/BicycleButler/design/main/scripts/install-design-skill.sh | bash
 ```
 
 Alternatively, if you have cloned the `design` repository locally:
@@ -65,7 +65,7 @@ npx -y tsx scripts/ci/validate-links.ts .
 Re-run the installation command from your project root at any time to refresh the skill and rules from upstream:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Wiltermoodj/design/main/scripts/install-design-skill.sh | bash
+curl -fsSL https://raw.githubusercontent.com/BicycleButler/design/main/scripts/install-design-skill.sh | bash
 ```
 
 ## Uninstall

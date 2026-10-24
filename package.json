@@ -1,5 +1,5 @@
 {
-  "name": "@wiltermood/design-guidelines",
+  "name": "@bicyclebutler/design",
   "version": "1.0.0",
   "description": "Codebase-agnostic UI/UX design guidelines, token scales, and automated compliance tools for AI coding agents.",
   "main": "RULES.md",
@@ -21,10 +21,14 @@
     "accessibility",
     "design-tokens"
   ],
-  "author": "Wiltermood",
+  "author": "BicycleButler",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Wiltermoodj/design.git"
-  }
+    "url": "https://github.com/BicycleButler/design.git"
+  },
+  "bugs": {
+    "url": "https://github.com/BicycleButler/design/issues"
+  },
+  "homepage": "https://github.com/BicycleButler/design#readme"
 }
