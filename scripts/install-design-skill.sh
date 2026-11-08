@@ -22,9 +22,8 @@ while [ $# -gt 0 ]; do
       echo "Usage: $0 [--check] [TARGET_PROJECT_DIR]"
       echo "Installs the design skill directly into a project repository."
       echo "Files installed:"
-      echo "  - RULES.md (project root)"
-      echo "  - .agents/skills/design/ (SKILL.md, REFERENCE.md, knowledge/, scripts/)"
-      echo "  - .agents/rules/RULES.md"
+      echo "  - .agents/skills/design/ (DESIGN-RULES.md, SKILL.md, REFERENCE.md, knowledge/, scripts/)"
+      echo "  - Progressive pointer in .agents/rules/RULES.md (non-destructive)"
       exit 0
       ;;
     *)
@@ -46,7 +45,7 @@ if [ -n "$SCRIPT_DIR" ]; then
   REPO_CANDIDATE="$(cd "$SCRIPT_DIR/.." >/dev/null 2>&1 && pwd)"
 fi
 
-if [ -n "$REPO_CANDIDATE" ] && [ -f "$REPO_CANDIDATE/SKILL.md" ] && [ -f "$REPO_CANDIDATE/RULES.md" ] && [ -d "$REPO_CANDIDATE/knowledge/design" ]; then
+if [ -n "$REPO_CANDIDATE" ] && [ -f "$REPO_CANDIDATE/SKILL.md" ] && ([ -f "$REPO_CANDIDATE/DESIGN-RULES.md" ] || [ -f "$REPO_CANDIDATE/RULES.md" ]) && [ -d "$REPO_CANDIDATE/knowledge/design" ]; then
   SOURCE_DIR="$REPO_CANDIDATE"
 fi
 
@@ -115,16 +114,46 @@ RULES_DEST_DIR="$PROJECT_AGENTS_DIR/rules"
 mkdir -p "$SKILL_DEST_DIR"
 mkdir -p "$RULES_DEST_DIR"
 
-# 1. Install root project RULES.md
-echo "[design-install] Copying RULES.md to project root ..."
-cp "$SOURCE_DIR/RULES.md" "$TARGET_DIR/RULES.md"
+# 1. Install DESIGN-RULES.md into skill directory
+echo "[design-install] Installing DESIGN-RULES.md to $SKILL_DEST_DIR/ ..."
+if [ -f "$SOURCE_DIR/DESIGN-RULES.md" ]; then
+  cp "$SOURCE_DIR/DESIGN-RULES.md" "$SKILL_DEST_DIR/DESIGN-RULES.md"
+elif [ -f "$SOURCE_DIR/RULES.md" ]; then
+  cp "$SOURCE_DIR/RULES.md" "$SKILL_DEST_DIR/DESIGN-RULES.md"
+fi
 
-# 2. Install workspace rule under .agents/rules/
-echo "[design-install] Copying design rules to .agents/rules/RULES.md ..."
-cp "$SOURCE_DIR/RULES.md" "$RULES_DEST_DIR/RULES.md"
+# 2. Check and inject progressive disclosure pointer into .agents/rules/RULES.md
+RULES_TARGET="$RULES_DEST_DIR/RULES.md"
+POINTER_TEXT="For UI component design, token scales, and accessibility: see [.agents/skills/design/DESIGN-RULES.md]."
+
+if [ ! -f "$RULES_TARGET" ]; then
+  echo "[design-install] Creating $RULES_TARGET with progressive routing pointer ..."
+  cat <<'EOF' > "$RULES_TARGET"
+---
+title: "Rules"
+type: "rules"
+status: "active"
+description: "Repository rules, compiler invariants, and domain routing matrix."
+---
+
+# Repository Rules & Constraints
+
+## UI, UX & Component Design
+- For UI component design, token scales, and accessibility: see [.agents/skills/design/DESIGN-RULES.md].
+EOF
+elif ! grep -q "DESIGN-RULES.md" "$RULES_TARGET"; then
+  echo "[design-install] Injecting design routing pointer into existing $RULES_TARGET ..."
+  cat <<EOF >> "$RULES_TARGET"
+
+## UI, UX & Component Design
+- $POINTER_TEXT
+EOF
+else
+  echo "[design-install] Design routing pointer already present in $RULES_TARGET"
+fi
 
 # 3. Install skill package under .agents/skills/design/
-echo "[design-install] Installing skill files to .agents/skills/$SKILL_NAME/ ..."
+echo "[design-install] Installing skill files to $SKILL_DEST_DIR/ ..."
 cp "$SOURCE_DIR/SKILL.md" "$SKILL_DEST_DIR/"
 cp "$SOURCE_DIR/REFERENCE.md" "$SKILL_DEST_DIR/"
 if [ -f "$SOURCE_DIR/MIGRATION.md" ]; then
@@ -142,9 +171,9 @@ if [ -d "$SOURCE_DIR/scripts" ]; then
 fi
 
 echo "[design-install] Successfully installed design skill into $TARGET_DIR:"
-echo "  - $TARGET_DIR/RULES.md"
-echo "  - $PROJECT_AGENTS_DIR/rules/RULES.md"
+echo "  - $SKILL_DEST_DIR/DESIGN-RULES.md"
 echo "  - $SKILL_DEST_DIR/SKILL.md"
 echo "  - $SKILL_DEST_DIR/REFERENCE.md"
 echo "  - $SKILL_DEST_DIR/knowledge/"
 echo "  - $SKILL_DEST_DIR/scripts/"
+echo "  - Progressive pointer in $RULES_TARGET"

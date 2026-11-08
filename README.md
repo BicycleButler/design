@@ -49,15 +49,14 @@ bash /path/to/design/scripts/install-design-skill.sh .
 
 The installer places the guidelines and agent skill directly into your project:
 
-- **Project Root**:
-  - `RULES.md` — Agent design system rules and routing matrix
 - **Agent Customizations (`.agents/`)**:
-  - `.agents/rules/RULES.md` — Workspace design rules and routing matrix
+  - `.agents/skills/design/DESIGN-RULES.md` — Agent design system rules, component routing matrix, and token scales
   - `.agents/skills/design/SKILL.md` — Core design skill instructions and checklist
   - `.agents/skills/design/REFERENCE.md` — Token lookup tables and specifications
   - `.agents/skills/design/MIGRATION.md` — Migration guide and strict typing adapter for legacy UI
   - `.agents/skills/design/knowledge/` — Design ADR corpus
   - `.agents/skills/design/scripts/` — Automated compliance and remediation scripts
+  - `.agents/rules/RULES.md` — Non-destructively updated with progressive domain pointer to `DESIGN-RULES.md`
 
 ## Validate
 
@@ -104,7 +103,7 @@ curl -fsSL https://raw.githubusercontent.com/BicycleButler/design/main/scripts/i
 To remove the installed design skill and rules from your project, run from your project root:
 
 ```bash
-rm -rf .agents/skills/design .agents/rules/RULES.md RULES.md
+rm -rf .agents/skills/design
 ```
 
 ## License

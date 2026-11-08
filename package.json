@@ -1,8 +1,8 @@
 {
   "name": "@bicyclebutler/design",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Codebase-agnostic UI/UX design guidelines, token scales, and automated compliance tools for AI coding agents.",
-  "main": "RULES.md",
+  "main": "DESIGN-RULES.md",
   "scripts": {
     "test": "npx tsx scripts/ci/validate-frontmatter.ts && npx tsx scripts/ci/validate-links.ts && npx tsx scripts/verify-design-adrs.ts && bash scripts/install-design-skill.sh --check",
     "audit": "npx tsx scripts/audit-design-system-compliance.ts",
