@@ -1,9 +1,9 @@
 ---
-title: 'ADR 0050: Offline States, Syncing & Concurrent Conflict Resolution'
-type: 'adr'
-status: 'in-progress'
-description: 'TODO Draft proposal: Visual indicators for network disruption, offline mutation queues, background sync banners, and conflict resolution diff modals.'
-date: '2026-08-20'
+title: "ADR 0050: Offline States, Syncing & Concurrent Conflict Resolution"
+type: "adr"
+status: "in-progress"
+description: "TODO Draft proposal: Visual indicators for network disruption, offline mutation queues, background sync banners, and conflict resolution diff modals."
+date: "2026-08-20"
 ---
 
 # ADR 0050: Offline States, Syncing & Concurrent Conflict Resolution
@@ -11,21 +11,27 @@ date: '2026-08-20'
 > [!NOTE]
 > **TODO / RFC Draft:** This document is in draft status within `knowledge/in-progress/` and serves as a discussion proposal for future revision and adoption. The specifications below represent proposed guidelines for review, not yet active design system enforcement rules.
 
+## Task-Intent Scope Boundary (`ECO-0041`)
+
+- **`desk-ledger` (`taskIntent: "desk-analysis" | "system-configuration"`)**: Side-by-side conflict resolution `Dialog` modals (`Section 3`) apply to `desk-ledger` collaborative record editing.
+- **`frontline-work` (`taskIntent: "work-execution" | "triage-disposition"`)**: Never open a blocking conflict modal during `frontline-work` execution. Append intents to the local `FrontlineSession` (`Q1`) log and attach discrepancies as `Obligation` items (`Q4`).
+
 ## Context
 
 Field operations, mobile CRM tasks, and real-time collaborative workspaces frequently experience intermittent network dropouts or simultaneous multi-user edits on identical records.
 
 Currently:
-
 1. Applications lack consistent offline feedback, leading users to believe actions failed or were lost.
-2. Optimistic UI merges (Architecture ADR 0011) lack clear visual states when mutations remain pending background sync.
+2. Optimistic UI merges (Architecture ADR 0011) lack clear visual states when mutations await background sync.
 3. Concurrent edit collisions silently overwrite data without presenting conflict resolution affordances.
 
 ## Proposed Guidelines & Architectural Standards
 
 ### 1 — Network Status Banners & Sticky Indicators
 
-- Status Banner: Offline mode. 3 changes queued. Working in read/cache mode. [Retry]
+```
+[Offline] You are offline. 3 changes queued. Working in read/cache mode. [Retry]
+```
 
 - **Top Sticky Banner:** When `navigator.onLine === false` or WebSocket connection drops:
   - Surface: `bg-muted text-foreground border-b border-border/60 py-2 px-4 text-xs font-medium flex items-center justify-between`.
@@ -46,10 +52,15 @@ Currently:
 
 When a user submits a change to a record that was modified remotely by another user:
 
-- Conflict Dialog Header: Resolve Editing Conflict for record
-- Metadata: Last modifier name and relative timestamp
-- Version Comparison: Side-by-side local changes against remote server version
-- Action Buttons: Cancel, Keep Remote, Overwrite Remote
+```
+Resolve Editing Conflict: Deal #1092
+Sarah Connor modified this record 2 minutes ago.
+Choose which version to retain:
+Your Local Changes      | Remote Server Version
+Amount: $52,000         | Amount: $48,000
+Stage: Negotiation      | Stage: Contract Sent
+[Cancel]               [Keep Remote]    [Overwrite Remote]
+```
 
 - **Dialog Class:** Standard `Dialog` (size tier `lg` or `xl`).
 - **Diff Presentation:** Side-by-side card comparison with field-level highlights.

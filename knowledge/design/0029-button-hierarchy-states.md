@@ -1,15 +1,13 @@
 ---
-title: '0029 - Button Hierarchy & States'
-type: 'adr'
-description: 'Accepted'
-status: 'active'
-last_updated: '2026-08-08T06:15:00Z'
+title: "0029 - Button Hierarchy & States"
+type: "adr"
+description: "Accepted"
+status: "active"
+last_updated: "2026-08-08T06:15:00Z"
 ---
-
 # 0029 - Button Hierarchy & States
 
 ## Context
-
 Button variants must maintain clear visual hierarchy without creating visual anxiety. Unbounded motion and arbitrary text-slide effects on standard form actions introduce visual noise.
 
 ## Decision
@@ -23,19 +21,21 @@ Button variants must maintain clear visual hierarchy without creating visual anx
 - Overflow trigger: `variant="ghost"`. Red text and highlight appear only on hover of the destructive item inside the open menu.
 
 ### 2 — Variant Decision Rule
-
 One button per tier per surface (card, modal footer, toolbar section):
 
 - Tier | Variant | When to use
 - Primary | `default` | Single primary CTA per surface (Save, Confirm, Submit)
-- Secondary | `outline` | Secondary actions (Edit, Export, Cancel in footers)
+- Secondary | `outline` | Secondary actions (Edit, Export, Cancel in footers, or Secondary Hero CTA)
 - Tertiary | `secondary` | Supporting actions in grouped toolbars or filter bars
 - Quiet / Menu Trigger | `ghost` | Low-emphasis: header icon controls, overflow triggers (`...`)
 - Text | `link` | Navigation-style triggers embedded in body text
 - Modal Destructive | `destructive` | Inside active confirmation modals or active hover in open menus
 
-### 3 — Functional Text-Slide Motion Rule
+> **Commerce Hero Conversion Exception (`ECO-0039`):** Inside `<HeroSurface>` (`site`, `storefront`, `scope`), `1 Primary CTA` (`variant="default"`) and `1 Secondary CTA` (`variant="outline"`) can appear side-by-side. The two buttons must render explicit text labels.
+>
+> **Approval Decision-Triad Exception (`ECO-0039`):** Inside `<MicroCardSurface>` and `ApprovalInbox` decision rows (`butler-chat`, `expense`, `workforce`), `Approve` (`variant="default"`), `Request Changes` (`variant="outline"`), and `Reject` (`variant="ghost"` at rest, revealing `hover:bg-destructive/10 hover:text-destructive` only on hover) can sit side-by-side.
 
+### 3 — Functional Text-Slide Motion Rule
 - Standard buttons use variants (`default`, `outline`, `ghost`) with 200ms background/border transitions and push feedback (`transform: scale(0.97)`).
 - **Text-slide exception:** Permitted only when the sliding text provides functional utility:
   1. **State/Mode Switchers:** "Copy Link" → "Copied!"
@@ -44,7 +44,6 @@ One button per tier per surface (card, modal footer, toolbar section):
 - **Forbidden:** Decorative-only text-slide, on standard form inputs, or inside table cells. Sliding buttons must enforce fixed width/height with `overflow-hidden`.
 
 ### 4 — Size Decision Rule
-
 - Size | Use
 - `sm` | Dense toolbars, table row overflow triggers, chips
 - `default` | Standard form submissions, modal footers, page CTAs
@@ -52,22 +51,18 @@ One button per tier per surface (card, modal footer, toolbar section):
 - `icon` / `icon-sm` / `icon-lg` | Icon-only controls. Mandatory `aria-label`
 
 ### 5 — Loading State
-
 - On click: disabled + `Loader2` spinner (`animate-spin`) replaces leading icon or appears left of label.
 - Label switches to past-progressive verb: "Saving…", "Deleting…".
 - The button is the status indicator — no separate full-screen spinner.
 
 ### 6 — Icon Placement
-
-- Leading icon only, except directional navigation (for example,., "Next →").
+- Leading icon only, except directional navigation (for example, "Next →").
 - Icon size: 16px (Action tier per [0021-iconography-imagery.md]).
 
 ### 7 — Keyboard & Focus Defaults
-
 - `Enter` confirms `default` and `outline` buttons when focused.
 - `Enter` must **never** auto-confirm destructive buttons inside `AlertDialog`s — focus lands on Cancel by default.
 - `Escape` dismisses the surface without action.
 
 ## Consequences
-
-- Defaulting Enter to Cancel prevents accidental deletions. This differs from standard dialog behavior.
+- `Enter` defaulting to Cancel in AlertDialogs prevents accidental keyboard deletions and is intentionally asymmetric with standard dialog behavior.

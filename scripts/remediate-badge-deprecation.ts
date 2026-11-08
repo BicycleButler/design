@@ -1,7 +1,10 @@
 import fs from 'fs';
 import path from 'path';
 
-const TARGET_DIR = path.resolve(process.cwd(), process.argv[2] || 'src');
+const rawArgs = process.argv.slice(2);
+const positionalArgs = rawArgs.filter((arg) => !arg.startsWith('--'));
+const isDryRun = rawArgs.includes('--dry-run');
+const TARGET_DIR = path.resolve(process.cwd(), positionalArgs[0] || 'src');
 
 function getAllFiles(dirPath: string, arrayOfFiles: string[] = []): string[] {
   if (!fs.existsSync(dirPath)) return arrayOfFiles;
@@ -13,12 +16,7 @@ function getAllFiles(dirPath: string, arrayOfFiles: string[] = []): string[] {
       if (file !== 'node_modules' && file !== '.next' && file !== 'dist' && file !== '.git') {
         arrayOfFiles = getAllFiles(fullPath, arrayOfFiles);
       }
-    } else if (
-      file.endsWith('.tsx') ||
-      file.endsWith('.ts') ||
-      file.endsWith('.jsx') ||
-      file.endsWith('.js')
-    ) {
+    } else if (file.endsWith('.tsx') || file.endsWith('.ts') || file.endsWith('.jsx') || file.endsWith('.js')) {
       arrayOfFiles.push(fullPath);
     }
   });
@@ -64,13 +62,12 @@ function remediateBadgeInFile(filePath: string) {
   }
 
   // Also fix status dot patterns
-  newContent = newContent.replace(
-    /w-2\s+h-2\s+rounded-full\s+bg-[a-z0-9-/]+/g,
-    'text-xs text-muted-foreground/60 font-medium',
-  );
+  newContent = newContent.replace(/w-2\s+h-2\s+rounded-full\s+bg-[a-z0-9-/]+/g, 'text-xs text-muted-foreground/60 font-medium');
 
   if (modified) {
-    fs.writeFileSync(filePath, newContent, 'utf8');
+    if (!isDryRun) {
+      fs.writeFileSync(filePath, newContent, 'utf8');
+    }
     return true;
   }
   return false;
@@ -82,7 +79,7 @@ function runBadgeRemediation() {
   files.forEach((filePath) => {
     if (remediateBadgeInFile(filePath)) {
       count++;
-      console.log(`Remediated Badge deprecation in: ${path.relative(process.cwd(), filePath)}`);
+      console.log(`${isDryRun ? '[DRY RUN] Would remediate' : 'Remediated'} Badge deprecation in: ${path.relative(process.cwd(), filePath)}`);
     }
   });
   console.log(`\nCompleted Badge remediation across ${count} files in ${TARGET_DIR}.`);

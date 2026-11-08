@@ -1,15 +1,13 @@
 ---
-title: '0022 - Animations, Motion & Transition Standards'
-type: 'adr'
-description: 'Accepted'
-status: 'active'
-last_updated: '2026-08-08T06:15:00Z'
+title: "0022 - Animations, Motion & Transition Standards"
+type: "adr"
+description: "Accepted"
+status: "active"
+last_updated: "2026-08-08T06:15:00Z"
 ---
-
 # 0022 - Animations, Motion & Transition Standards
 
 ## Context
-
 Covers all animation and transition rules: element-level micro-interactions, async state visuals, route transitions, and section reveals. Scoped to the visual layer. Data-layer merge strategy is governed by [../architecture/adr/0011-optimistic-ui-merging.md].
 
 ## Decision
@@ -21,7 +19,7 @@ Covers all animation and transition rules: element-level micro-interactions, asy
 3. **Tooltip Delay Tiers.** Three tiers by context:
    - **Toolbar buttons (200–300ms):** Page toolbar icon buttons per [0039-toolbar-header-standards.md]. Toolbar context implies deliberate cursor placement.
    - **Content area (700–1000ms):** Dropdowns, popovers, general hover tooltips — implementations can tune within the band.
-   - **Standalone icons & avatars (1000ms):** Floating controls and avatars use 1000ms delay to prevent flicker during rapid scanning.
+   - **Standalone icons & avatars (1000ms):** Floating icon controls and avatar name tags use 1000ms to prevent flicker during rapid scanning.
    - All tooltips dismiss instantly on mouse-out.
 4. **Avatar Name Tags.** Render through Portal-based Tooltips or Popovers anchored to the avatar. Expanding or morphing the avatar container is prohibited per [0021-iconography-imagery.md].
 5. **Reduced Motion.** Respect `prefers-reduced-motion: reduce` — replace spatial animations with instant state switches or opacity-only fades. Skeleton shimmer halts: `motion-reduce:after:animate-none`.
@@ -42,20 +40,24 @@ Covers all animation and transition rules: element-level micro-interactions, asy
 10. **List Item Stagger.** Stagger the first 8 items at 20–30ms intervals through `animationDelay`. Items 9+ appear simultaneously. Stagger only on initial mount — not on re-renders or filter changes.
 
     ```tsx
-    {
-      items.map((item, i) => (
-        <div
-          key={item.id}
-          className="animate-in fade-in slide-in-from-bottom-2 duration-300"
-          style={{ animationDelay: `${Math.min(i, 7) * 25}ms` }}
-        />
-      ));
-    }
+    {items.map((item, i) => (
+      <div
+        key={item.id}
+        className="animate-in fade-in slide-in-from-bottom-2 duration-300"
+        style={{ animationDelay: `${Math.min(i, 7) * 25}ms` }}
+      />
+    ))}
     ```
 
 11. **Dialog / Sheet.** Preserve Radix transitions: open `fade-in-0 zoom-in-95` (200ms), close `fade-out-0 zoom-out-95` (200ms). No slide animations on dialogs.
 12. **Dropdown / Popover.** Open/close: `fade-in-0 zoom-in-95` / `fade-out-0 zoom-out-95` at 100ms.
 13. **Skeleton → Content.** Fade in the content wrapper: `animate-in fade-in duration-200`. Never slide or scale — position is already established.
+
+### Direct-Manipulation Physics & Haptic Detents (`ECO-0039`)
+
+14. **Two-Regime Motion Contract.** Standard UI state changes and discrete `+`/`-` stepper clicks obey the `150ms–500ms` cubic-bezier budget above. Active pointer dragging (`isDragging === true` through `setPointerCapture`) updates transforms at `0ms` latency inside `requestAnimationFrame` (`will-change: transform`).
+15. **Detent Haptic Feedback (`triggerDetentHaptic`).** Haptic pulses (`navigator.vibrate(10)` for discrete click steps, `[15, 30, 15]` for mechanical min/max stops) must fire strictly when crossing an integer step detent (`clicksDelta >= 1`). Continuous vibration on sub-step pixel movement is prohibited.
+16. **Spatial Beacons & Specular Lighting.** SVG diagrams can render hit-zone beacons, and `<HardwareSurface>` dials can shift specular sheen from device tilt. When `prefers-reduced-motion: reduce` is active, beacon pulses, gyro lighting shifts, and haptic vibrations must halt automatically.
 
 ### Forbidden Patterns
 

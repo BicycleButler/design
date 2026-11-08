@@ -1,15 +1,13 @@
 ---
-title: '0023 - Accessibility Standards'
-type: 'adr'
-description: 'Accepted'
-status: 'active'
-last_updated: '2026-07-18T18:35:00Z'
+title: "0023 - Accessibility Standards"
+type: "adr"
+description: "Accepted"
+status: "active"
+last_updated: "2026-07-18T18:35:00Z"
 ---
-
 # 0023 - Accessibility Standards
 
 ## Context
-
 Accessibility violations — suppressed focus rings, missing keyboard navigation, color-only status indicators, undersized touch targets — exclude users with disabilities and expose projects to legal risk. Without codified standards, accessibility treated as optional polish structural requirement.
 
 ## Decision

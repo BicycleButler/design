@@ -1,23 +1,20 @@
 ---
-title: '0030 - Content Formatting Standards'
-type: 'adr'
-description: 'Accepted'
-status: 'active'
-last_updated: '2026-07-29T15:30:00Z'
+title: "0030 - Content Formatting Standards"
+type: "adr"
+description: "Accepted"
+status: "active"
+last_updated: "2026-07-29T15:30:00Z"
 ---
-
 # 0030 - Content Formatting Standards
 
 ## Context
-
-No standard exists for how dates, times, numbers, currency, or "unknown" values are displayed to users. This produces inconsistent UI: dates show as ISO strings, currency loses formatting, and missing values vary arbitrarily.
+No standard exists for how dates, times, numbers, currency, or "unknown" values are displayed to users. This produces inconsistent UI: some dates show as ISO strings, some as full long form, currency loses locale formatting, and missing values alternate between blank cells, "N/A", "null", and em-dashes.
 
 ## Decision
 
 ### 1 — Date & Time Display
 
 **Relative against. Absolute rule (mirrors Facebook's recency model):**
-
 - Age of event | Display format | Example
 - < 1 minute | "Just now" | Just now
 - 1–59 minutes | "{n} minutes ago" | 12 minutes ago
@@ -27,7 +24,7 @@ No standard exists for how dates, times, numbers, currency, or "unknown" values 
 - Same calendar year | "MMM D at {time}" | Jul 29 at 2:14 PM
 - Different year | "MMM D, YYYY" | Jul 29, 2024
 
-**Absolute date format:** `MMM D, YYYY` (for example,., "Jul 29, 2026"). Never `MM/DD/YYYY`.
+**Absolute date format:** `MMM D, YYYY` (for example, "Jul 29, 2026"). Never `MM/DD/YYYY`.
 
 **Time format:** 12-hour with AM/PM: `2:14 PM`. No leading zero on hours.
 
@@ -48,7 +45,7 @@ No standard exists for how dates, times, numbers, currency, or "unknown" values 
 ### 3 — Plain Numbers
 
 - **Thousands separator:** Comma: `1,234,567`.
-- **Decimals:** Show only when meaningful (counts = 0 decimals. Percentages = 1 decimal,  rates = 2 decimals).
+- **Decimals:** Show only when meaningful (counts = 0 decimals. Percentages = 1 decimal. Rates = 2 decimals).
 - **Large count abbreviation:** Same threshold as currency: ≥10,000 → `12.3K`, ≥1,000,000 → `1.2M`.
 - **Zero:** Display as `0` — never blank for a numeric field.
 
@@ -77,7 +74,6 @@ No standard exists for how dates, times, numbers, currency, or "unknown" values 
 - Single-line (tables/cards): truncate at available width with ellipsis. Show full on hover tooltip.
 
 ## Consequences
-
 - All user-facing values display consistently regardless of which component renders them.
 - "Unknown" states are visually unambiguous and never confused with zero or false values.
 - Relative time keeps feeds feeling alive while absolute tooltips preserve precision.

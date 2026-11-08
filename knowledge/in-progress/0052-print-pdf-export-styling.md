@@ -1,9 +1,9 @@
 ---
-title: 'ADR 0052: Print & PDF Export Styling Standards'
-type: 'adr'
-status: 'in-progress'
-description: 'TODO Draft proposal: Print media stylesheets (@media print), pagination break controls, hiding UI chrome, and high-contrast ink-saving palettes.'
-date: '2026-08-20'
+title: "ADR 0052: Print & PDF Export Styling Standards"
+type: "adr"
+status: "in-progress"
+description: "TODO Draft proposal: Print media stylesheets (@media print), pagination break controls, hiding UI chrome, and high-contrast ink-saving palettes."
+date: "2026-08-20"
 ---
 
 # ADR 0052: Print & PDF Export Styling Standards
@@ -11,12 +11,16 @@ date: '2026-08-20'
 > [!NOTE]
 > **TODO / RFC Draft:** This document is in draft status within `knowledge/in-progress/` and serves as a discussion proposal for future revision and adoption. The specifications below represent proposed guidelines for review, not yet active design system enforcement rules.
 
+## Task-Intent Scope Boundary (`ECO-0041`)
+
+- **`desk-ledger` (`taskIntent: "desk-analysis" | "system-configuration"`)**: CSS `@media print` document rules, page break management, and `.print-only` invoice/report headers apply to `desk-ledger` views.
+- **`frontline-work` (`taskIntent: "work-execution" | "triage-disposition"`)**: Route thermal label printing through `CapabilitySpec` (`resolveCapabilityWithLadder`, `Q5`, `250 ms` timeout) with `print: ["hardware", "deferred-post-hoc"]` fallback.
+
 ## Context
 
 Users frequently print or export web views as PDFs for physical records, client invoice handoffs, field repair orders, and executive summary reporting.
 
 Currently:
-
 1. Printing a web page captures interactive navigation sidebars, floating FAB buttons, and toolbars.
 2. Dark mode backgrounds consume excessive printer ink or print as unreadable dark gray boxes.
 3. Multi-row tables and detail cards split awkwardly across page margins mid-row.
@@ -36,13 +40,12 @@ When `@media print` is activated:
   footer,
   .no-print,
   button,
-  [role='toolbar'] {
+  [role="toolbar"] {
     display: none !important;
   }
 
   /* 2. Reset backgrounds and force high-contrast ink */
-  body,
-  main {
+  body, main {
     background: #ffffff !important;
     color: #000000 !important;
     box-shadow: none !important;
@@ -51,8 +54,7 @@ When `@media print` is activated:
   }
 
   /* 3. Render full widths */
-  .container,
-  main {
+  .container, main {
     max-width: 100% !important;
     width: 100% !important;
   }
@@ -65,14 +67,13 @@ To prevent awkward mid-element splits across physical printed pages:
 
 - **Cards & Summary Panels:**
   ```css
-  .print-avoid-break,
-  .surface-card {
+  .print-avoid-break, .surface-card {
     break-inside: avoid;
     page-break-inside: avoid;
   }
   ```
 - **Table Headers & Rows:**
-  - Table headers must appear again on subsequent printed pages:
+  - Display table headers again on each printed page:
     ```css
     thead {
       display: table-header-group;
@@ -85,10 +86,12 @@ To prevent awkward mid-element splits across physical printed pages:
 
 ### 3 — Printable Document Anatomy & Header Block
 
-Every printable detail view (for example,. Invoices, Field Repair Sheets) must render a dedicated `.print-only` header block that is hidden in the web browser (`hidden print:block`):
+Every printable detail view (for example, Invoices, Field Repair Sheets) must render a dedicated `.print-only` header block that is hidden in the web browser (`hidden print:block`):
 
-- Document Header: The Bicycle Butler | Invoice #1092
-- Metadata: Field Operations Service Report | Date: 2026-08-20
+```
+THE BICYCLE BUTLER                          INVOICE #1092
+Field Operations Service Report          Date: 2026-08-20
+```
 
 ## Anti-Patterns & Prohibitions
 

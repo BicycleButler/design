@@ -1,7 +1,10 @@
 import fs from 'fs';
 import path from 'path';
 
-const TARGET_DIR = path.resolve(process.cwd(), process.argv[2] || 'src');
+const rawArgs = process.argv.slice(2);
+const positionalArgs = rawArgs.filter((arg) => !arg.startsWith('--'));
+const isDryRun = rawArgs.includes('--dry-run');
+const TARGET_DIR = path.resolve(process.cwd(), positionalArgs[0] || 'src');
 
 function getAllFiles(dirPath: string, arrayOfFiles: string[] = []): string[] {
   if (!fs.existsSync(dirPath)) return arrayOfFiles;
@@ -13,12 +16,7 @@ function getAllFiles(dirPath: string, arrayOfFiles: string[] = []): string[] {
       if (file !== 'node_modules' && file !== '.next' && file !== 'dist' && file !== '.git') {
         arrayOfFiles = getAllFiles(fullPath, arrayOfFiles);
       }
-    } else if (
-      file.endsWith('.tsx') ||
-      file.endsWith('.ts') ||
-      file.endsWith('.jsx') ||
-      file.endsWith('.js')
-    ) {
+    } else if (file.endsWith('.tsx') || file.endsWith('.ts') || file.endsWith('.jsx') || file.endsWith('.js')) {
       arrayOfFiles.push(fullPath);
     }
   });
@@ -54,10 +52,7 @@ function remediateFile(filePath: string): boolean {
   // 3. A11y icon buttons missing aria-label
   const lines = content.split('\n');
   const newLines = lines.map((line) => {
-    if (
-      /<Button[^>]*size=["'](?:icon|icon-sm|icon-lg)["'][^>]*>/.test(line) &&
-      !line.includes('aria-label')
-    ) {
+    if (/<Button[^>]*size=["'](?:icon|icon-sm|icon-lg)["'][^>]*>/.test(line) && !line.includes('aria-label')) {
       let label = '';
       if (line.includes('title=')) {
         const match = line.match(/title=["']([^"']+)["']/);
@@ -82,7 +77,9 @@ function remediateFile(filePath: string): boolean {
   content = newLines.join('\n');
 
   if (content !== original) {
-    fs.writeFileSync(filePath, content, 'utf8');
+    if (!isDryRun) {
+      fs.writeFileSync(filePath, content, 'utf8');
+    }
     return true;
   }
   return false;
@@ -94,7 +91,7 @@ function runRemediation() {
   files.forEach((file) => {
     if (remediateFile(file)) {
       count++;
-      console.log(`Remediated fallbacks/emojis/a11y in: ${path.relative(process.cwd(), file)}`);
+      console.log(`${isDryRun ? '[DRY RUN] Would remediate' : 'Remediated'} fallbacks/emojis/a11y in: ${path.relative(process.cwd(), file)}`);
     }
   });
   console.log(`\nCompleted fallbacks & a11y remediation across ${count} files in ${TARGET_DIR}.`);

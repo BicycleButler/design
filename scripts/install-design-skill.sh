@@ -24,7 +24,7 @@ while [ $# -gt 0 ]; do
       echo "Files installed:"
       echo "  - RULES.md (project root)"
       echo "  - .agents/skills/design/ (SKILL.md, REFERENCE.md, knowledge/, scripts/)"
-      echo "  - .agents/rules/design-rules.md"
+      echo "  - .agents/rules/RULES.md"
       exit 0
       ;;
     *)
@@ -108,13 +108,16 @@ echo "[design-install] Copying RULES.md to project root ..."
 cp "$SOURCE_DIR/RULES.md" "$TARGET_DIR/RULES.md"
 
 # 2. Install workspace rule under .agents/rules/
-echo "[design-install] Copying design rules to .agents/rules/design-rules.md ..."
-cp "$SOURCE_DIR/RULES.md" "$RULES_DEST_DIR/design-rules.md"
+echo "[design-install] Copying design rules to .agents/rules/RULES.md ..."
+cp "$SOURCE_DIR/RULES.md" "$RULES_DEST_DIR/RULES.md"
 
 # 3. Install skill package under .agents/skills/design/
 echo "[design-install] Installing skill files to .agents/skills/$SKILL_NAME/ ..."
 cp "$SOURCE_DIR/SKILL.md" "$SKILL_DEST_DIR/"
 cp "$SOURCE_DIR/REFERENCE.md" "$SKILL_DEST_DIR/"
+if [ -f "$SOURCE_DIR/MIGRATION.md" ]; then
+  cp "$SOURCE_DIR/MIGRATION.md" "$SKILL_DEST_DIR/"
+fi
 
 if [ -d "$SOURCE_DIR/knowledge" ]; then
   mkdir -p "$SKILL_DEST_DIR/knowledge"
@@ -128,7 +131,7 @@ fi
 
 echo "[design-install] Successfully installed design skill into $TARGET_DIR:"
 echo "  - $TARGET_DIR/RULES.md"
-echo "  - $PROJECT_AGENTS_DIR/rules/design-rules.md"
+echo "  - $PROJECT_AGENTS_DIR/rules/RULES.md"
 echo "  - $SKILL_DEST_DIR/SKILL.md"
 echo "  - $SKILL_DEST_DIR/REFERENCE.md"
 echo "  - $SKILL_DEST_DIR/knowledge/"

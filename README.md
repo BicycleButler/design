@@ -37,6 +37,7 @@ The installer places the guidelines and agent skill directly into your project:
   - `.agents/rules/design-rules.md` — Automatic directory rule discovery
   - `.agents/skills/design/SKILL.md` — Core design skill instructions and checklist
   - `.agents/skills/design/REFERENCE.md` — Token lookup tables and specifications
+  - `.agents/skills/design/MIGRATION.md` — Migration guide and strict typing adapter for legacy UI
   - `.agents/skills/design/knowledge/` — Design ADR corpus
   - `.agents/skills/design/scripts/` — Automated compliance and remediation scripts
 

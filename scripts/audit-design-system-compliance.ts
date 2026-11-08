@@ -11,7 +11,11 @@ interface Violation {
   description: string;
 }
 
-const TARGET_DIR = path.resolve(process.cwd(), process.argv[2] || 'src');
+const rawArgs = process.argv.slice(2);
+const positionalArgs = rawArgs.filter((arg) => !arg.startsWith('--'));
+const isStrict = rawArgs.includes('--strict');
+const isJsonOutput = rawArgs.includes('--json');
+const TARGET_DIR = path.resolve(process.cwd(), positionalArgs[0] || 'src');
 
 function getAllFiles(dirPath: string, arrayOfFiles: string[] = []): string[] {
   if (!fs.existsSync(dirPath)) return arrayOfFiles;
@@ -20,10 +24,14 @@ function getAllFiles(dirPath: string, arrayOfFiles: string[] = []): string[] {
   files.forEach((file) => {
     const fullPath = path.join(dirPath, file);
     if (fs.statSync(fullPath).isDirectory()) {
-      if (file !== 'node_modules' && file !== '.next') {
+      if (file !== 'node_modules' && file !== '.next' && file !== 'dist' && file !== 'build' && file !== '.git') {
         arrayOfFiles = getAllFiles(fullPath, arrayOfFiles);
       }
-    } else if (file.endsWith('.tsx') || file.endsWith('.ts')) {
+    } else if (file.endsWith('.tsx') || file.endsWith('.ts') || file.endsWith('.css')) {
+      // Skip compiled CSS output bundles (for example, packages/ui/src/index.css when globals.css exists alongside)
+      if (file === 'index.css' && fs.existsSync(path.join(dirPath, 'globals.css'))) {
+        return;
+      }
       arrayOfFiles.push(fullPath);
     }
   });
@@ -36,6 +44,7 @@ function auditFile(filePath: string): Violation[] {
   const content = fs.readFileSync(filePath, 'utf8');
   const lines = content.split('\n');
   const violations: Violation[] = [];
+  const isCssFile = filePath.endsWith('.css');
 
   const isModalOrDialog =
     content.includes('AlertDialog') ||
@@ -43,31 +52,108 @@ function auditFile(filePath: string): Violation[] {
     content.includes('DropdownMenu') ||
     content.includes('Popover');
 
+  // Detect Frontline Work / Triage surface mode (ECO-0041)
+  const isFrontlineWorkSurface =
+    content.includes('@wiltermoodj/ui/frontline') ||
+    content.includes('useFrontlineWorkflow') ||
+    /taskIntent=["'](?:work-execution|triage-disposition)["']/.test(content) ||
+    /executionSurfaceMode=["']frontline-work["']/.test(content) ||
+    content.includes('useFrontlineStream') ||
+    content.includes('foldFrontlineSession');
+
   lines.forEach((lineText, idx) => {
     const lineNum = idx + 1;
+    const nearbyContext = lines.slice(Math.max(0, idx - 3), Math.min(lines.length, idx + 4)).join('\n');
 
-    // Rule 1: Badge Deprecation (ADR 0035)
-    if (
-      lineText.includes('@/components/ui/badge') ||
-      lineText.includes('@/components/ui/Badge') ||
-      /<Badge[\s/>]/.test(lineText)
-    ) {
-      violations.push({
-        file: relativePath,
-        line: lineNum,
-        rule: 'Badge Deprecation',
-        adr: 'ADR 0035',
-        severity: 'ERROR',
-        snippet: lineText.trim(),
-        description:
-          'Usage of deprecated Badge component. Replace with Concept C sub-label stacking or Concept A margin wash.',
-      });
+    // CSS files only run Rule 6 (linear easing) and Rule 14 (--surface-raised-border overrides)
+    if (isCssFile) {
+      if (/transition-[a-z-]*\s+linear/.test(lineText) || /ease-linear/.test(lineText)) {
+        violations.push({
+          file: relativePath,
+          line: lineNum,
+          rule: 'Linear Easing Banned',
+          adr: 'ADR 0022',
+          severity: 'ERROR',
+          snippet: lineText.trim(),
+          description: 'Linear easing is strictly banned system-wide. Use cubic-bezier curves.'
+        });
+      }
+      if (
+        lineText.includes('--surface-raised-border: var(--border)') ||
+        lineText.includes('--surface-raised-border: #') ||
+        lineText.includes('--surface-raised-border: rgb')
+      ) {
+        violations.push({
+          file: relativePath,
+          line: lineNum,
+          rule: 'Conflicting Surface Border Token',
+          adr: 'ADR 0041',
+          severity: 'ERROR',
+          snippet: lineText.trim(),
+          description: '--surface-raised-border must be transparent to uphold borderless resting elevated surfaces. Consume @wiltermoodj/ui/globals.css.'
+        });
+      }
+      if (/--surface-raised-border-opacity:\s*1\b/.test(lineText)) {
+        violations.push({
+          file: relativePath,
+          line: lineNum,
+          rule: 'Conflicting Surface Border Opacity',
+          adr: 'ADR 0041',
+          severity: 'ERROR',
+          snippet: lineText.trim(),
+          description: '--surface-raised-border-opacity must be 0 for resting raised surfaces per ADR 0041.'
+        });
+      }
+      return;
+    }
+
+    // Rule 1: Badge & Status Pill Deprecation (ADR 0035)
+    const isBadgeDeclarationFile = relativePath.endsWith('badge.tsx') || relativePath.endsWith('badge.ts');
+    if (!isBadgeDeclarationFile) {
+      if (
+        lineText.includes('@/components/ui/badge') ||
+        lineText.includes('@/components/ui/Badge') ||
+        /import\s+.*from\s+["'].*\/badge(?:\.js)?["']/.test(lineText) ||
+        /import\s+.*Badge.*from\s+["']@(?:wiltermoodj|omnibutler)\/ui["']/.test(lineText) ||
+        /<Badge[\s/>]/.test(lineText)
+      ) {
+        violations.push({
+          file: relativePath,
+          line: lineNum,
+          rule: 'Badge Deprecation',
+          adr: 'ADR 0035',
+          severity: 'ERROR',
+          snippet: lineText.trim(),
+          description: 'Usage of deprecated Badge component. Replace with Concept C sub-label stacking or Concept A margin wash.'
+        });
+      }
+
+      // Status Pill pattern (ADR 0035)
+      if (
+        !relativePath.includes('avatar') &&
+        !relativePath.includes('calendar') &&
+        !relativePath.includes('switch') &&
+        (/px-1\.5\s+py-0\.5\s+rounded-full/.test(lineText) ||
+          /rounded-full\s+px-1\.5\s+py-0\.5/.test(lineText) ||
+          /rounded-full\s+border\s+px-2\.5\s+py-0\.5/.test(lineText))
+      ) {
+        violations.push({
+          file: relativePath,
+          line: lineNum,
+          rule: 'Status Pill Deprecation',
+          adr: 'ADR 0035',
+          severity: 'ERROR',
+          snippet: lineText.trim(),
+          description: 'Status pill indicators are banned per ADR 0035. Use Concept C sub-label stacking or Concept A margin wash.'
+        });
+      }
     }
 
     // Colored dots pattern (ADR 0035)
     if (
-      /w-2\s+h-2\s+rounded-full\s+bg-/.test(lineText) ||
-      /rounded-full\s+w-2\s+h-2/.test(lineText)
+      (/w-2\s+h-2\s+rounded-full\s+bg-/.test(lineText) || /rounded-full\s+w-2\s+h-2/.test(lineText)) &&
+      !lineText.includes('animate-pulse') &&
+      !lineText.includes('animate-ping')
     ) {
       violations.push({
         file: relativePath,
@@ -76,7 +162,7 @@ function auditFile(filePath: string): Violation[] {
         adr: 'ADR 0035',
         severity: 'WARNING',
         snippet: lineText.trim(),
-        description: 'Colored status dots are deprecated. Use Concept C sub-label stacking.',
+        description: 'Colored status dots are deprecated. Use Concept C sub-label stacking.'
       });
     }
 
@@ -89,25 +175,31 @@ function auditFile(filePath: string): Violation[] {
         adr: 'ADR 0029 / ADR 0036',
         severity: 'ERROR',
         snippet: lineText.trim(),
-        description:
-          'Persistent destructive variant button on resting surface. Gate behind overflow menu (...) or AlertDialog.',
+        description: 'Persistent destructive variant button on resting surface. Gate behind overflow menu (...) or AlertDialog.'
       });
     }
 
-    // Rule 3: Static Semantic Alert Colors (ADR 0020)
+    // Rule 3: Static Semantic Alert Colors (ADR 0020 & ECO-0041 state-kinetic leniency)
+    const isTransientOrHardwareState =
+      lineText.includes('toast') ||
+      lineText.includes('error') ||
+      lineText.includes('invalid') ||
+      lineText.includes('reauth') ||
+      lineText.includes('hover:') ||
+      lineText.includes('animate-pulse') ||
+      lineText.includes('animate-ping') ||
+      lineText.includes('data-frontline-pulse') ||
+      nearbyContext.includes('permissionError') ||
+      nearbyContext.includes('errorMessage') ||
+      nearbyContext.includes('isOffline') ||
+      nearbyContext.includes('SCAN_SUCCESS') ||
+      nearbyContext.includes('ERROR_HALT');
+
     if (
       /(?:text|bg)-(?:red|amber|emerald|green)-(?:500|600|700|100|200)/.test(lineText) &&
-      !lineText.includes('toast') &&
-      !lineText.includes('error') &&
-      !lineText.includes('invalid') &&
-      !lineText.includes('reauth') &&
-      !lineText.includes('hover:')
+      !isTransientOrHardwareState
     ) {
-      if (
-        !relativePath.includes('chart') &&
-        !relativePath.includes('calendar') &&
-        !relativePath.includes('health')
-      ) {
+      if (!relativePath.includes('chart') && !relativePath.includes('calendar') && !relativePath.includes('health')) {
         violations.push({
           file: relativePath,
           line: lineNum,
@@ -115,16 +207,13 @@ function auditFile(filePath: string): Violation[] {
           adr: 'ADR 0020',
           severity: 'WARNING',
           snippet: lineText.trim(),
-          description:
-            'Static alert color on resting UI element. Restrict colored alerts to transient states or active hover.',
+          description: 'Static alert color on resting UI element. Restrict colored alerts to transient states or active hover.'
         });
       }
     }
 
     // Rule 4: Arbitrary Spacing/Dimensions (ADR 0018)
-    const arbitrarySpacingMatch = lineText.match(
-      /(?:[pmp]|px|py|pl|pr|pt|pb|gap|space-x|space-y)-\[(\d+px)\]/,
-    );
+    const arbitrarySpacingMatch = lineText.match(/(?:[pmp]|px|py|pl|pr|pt|pb|gap|space-x|space-y)-\[(\d+px)\]/);
     if (arbitrarySpacingMatch) {
       violations.push({
         file: relativePath,
@@ -133,15 +222,18 @@ function auditFile(filePath: string): Violation[] {
         adr: 'ADR 0018',
         severity: 'WARNING',
         snippet: lineText.trim(),
-        description: `Arbitrary spacing value ${arbitrarySpacingMatch[1]} used. Use 7-token scale (space-1 to space-12).`,
+        description: `Arbitrary spacing value ${arbitrarySpacingMatch[1]} used. Use 7-token scale (space-1 to space-12).`
       });
     }
 
-    // Rule 5: Font Size Cap > 24px (ADR 0019)
+    // Rule 5: Font Size Cap > 24px (ADR 0019 & ECO-0039 / ECO-0041 leniency)
+    const isFrontlineReadout =
+      isFrontlineWorkSurface && (lineText.includes('tabular-nums') || lineText.includes('font-mono'));
     if (
       /text-(?:3xl|4xl|5xl|6xl|7xl|8xl|9xl)/.test(lineText) &&
       !relativePath.includes('hero') &&
-      !relativePath.includes('landing')
+      !relativePath.includes('landing') &&
+      !isFrontlineReadout
     ) {
       violations.push({
         file: relativePath,
@@ -150,7 +242,7 @@ function auditFile(filePath: string): Violation[] {
         adr: 'ADR 0019',
         severity: 'ERROR',
         snippet: lineText.trim(),
-        description: 'Font size exceeds strict application cap of 24px (text-2xl).',
+        description: 'Font size exceeds strict application cap of 24px (text-2xl). Use text-display-* for marketing heroes or text-readout-* for hardware/frontline telemetry.'
       });
     }
 
@@ -163,7 +255,7 @@ function auditFile(filePath: string): Violation[] {
         adr: 'ADR 0022',
         severity: 'ERROR',
         snippet: lineText.trim(),
-        description: 'Linear easing is strictly banned system-wide. Use cubic-bezier curves.',
+        description: 'Linear easing is strictly banned system-wide. Use cubic-bezier curves.'
       });
     }
 
@@ -176,16 +268,13 @@ function auditFile(filePath: string): Violation[] {
         adr: 'ADR 0022',
         severity: 'WARNING',
         snippet: lineText.trim(),
-        description:
-          '`transition: all` is a forbidden pattern — animates unintended properties. Use specific transition properties.',
+        description: '`transition: all` is a forbidden pattern — animates unintended properties. Use specific transition properties.'
       });
     }
 
     // Rule 6c: Explicit Resting Container Border (ADR 0041)
     if (
-      /(?:<Card|<ContainerPanel)[^>]*className=["'][^"']*\b(?:border|border-border)\b/.test(
-        lineText,
-      ) &&
+      /<(?:Card|ContainerPanel)\b[^>]*className=["'][^"']*\b(?:border|border-border)\b/.test(lineText) &&
       !lineText.includes('border-dashed') &&
       !lineText.includes('border-primary') &&
       !lineText.includes('border-destructive') &&
@@ -198,16 +287,11 @@ function auditFile(filePath: string): Violation[] {
         adr: 'ADR 0041',
         severity: 'WARNING',
         snippet: lineText.trim(),
-        description:
-          'Explicit resting border on Card or ContainerPanel is deprecated. Resting containers are borderless by default and elevated via shadow.',
+        description: 'Explicit resting border on Card or ContainerPanel is deprecated. Resting containers are borderless by default and elevated via shadow.'
       });
     }
 
-    if (
-      /duration-(?:700|800|900|1000|1500|2000)/.test(lineText) &&
-      !lineText.includes('animate-spin') &&
-      !lineText.includes('pulse')
-    ) {
+    if (/duration-(?:700|800|900|1000|1500|2000)/.test(lineText) && !lineText.includes('animate-spin') && !lineText.includes('pulse')) {
       violations.push({
         file: relativePath,
         line: lineNum,
@@ -215,14 +299,12 @@ function auditFile(filePath: string): Violation[] {
         adr: 'ADR 0022',
         severity: 'WARNING',
         snippet: lineText.trim(),
-        description: 'Transition duration exceeds strict cap of 500ms.',
+        description: 'Transition duration exceeds strict cap of 500ms.'
       });
     }
 
     // Rule 7: Non-Lucide Icon Imports or Raw Unicode Emojis in JSX (ADR 0021)
-    if (
-      /import\s+.*from\s+['"](@heroicons|react-icons|@radix-ui\/react-icons)['"]/.test(lineText)
-    ) {
+    if (/import\s+.*from\s+['"](@heroicons|react-icons|@radix-ui\/react-icons)['"]/.test(lineText)) {
       violations.push({
         file: relativePath,
         line: lineNum,
@@ -230,15 +312,11 @@ function auditFile(filePath: string): Violation[] {
         adr: 'ADR 0021',
         severity: 'ERROR',
         snippet: lineText.trim(),
-        description: 'Icon imported from non-Lucide library. Standardize on Lucide icons.',
+        description: 'Icon imported from non-Lucide library. Standardize on Lucide icons.'
       });
     }
 
-    if (
-      /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/u.test(lineText) &&
-      !lineText.includes('//') &&
-      !lineText.includes('/*')
-    ) {
+    if (/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/u.test(lineText) && !lineText.includes('//') && !lineText.includes('/*')) {
       violations.push({
         file: relativePath,
         line: lineNum,
@@ -246,7 +324,7 @@ function auditFile(filePath: string): Violation[] {
         adr: 'ADR 0021',
         severity: 'WARNING',
         snippet: lineText.trim(),
-        description: 'Raw unicode emoji used in functional UI. Replace with Lucide icon.',
+        description: 'Raw unicode emoji used in functional UI. Replace with Lucide icon.'
       });
     }
 
@@ -254,9 +332,7 @@ function auditFile(filePath: string): Violation[] {
     if (
       /<Button[^>]*size=["'](?:icon|icon-sm|icon-lg)["'][^>]*>/.test(lineText) &&
       !lineText.includes('aria-label') &&
-      !content
-        .slice(Math.max(0, content.indexOf(lineText) - 50), content.indexOf(lineText) + 200)
-        .includes('aria-label')
+      !content.slice(Math.max(0, content.indexOf(lineText) - 50), content.indexOf(lineText) + 200).includes('aria-label')
     ) {
       violations.push({
         file: relativePath,
@@ -265,7 +341,7 @@ function auditFile(filePath: string): Violation[] {
         adr: 'ADR 0023 / ADR 0029',
         severity: 'WARNING',
         snippet: lineText.trim(),
-        description: 'Icon-only button missing explicit aria-label attribute for accessibility.',
+        description: 'Icon-only button missing explicit aria-label attribute for accessibility.'
       });
     }
 
@@ -278,11 +354,25 @@ function auditFile(filePath: string): Violation[] {
         adr: 'ADR 0030',
         severity: 'WARNING',
         snippet: lineText.trim(),
-        description: 'Fallback string should use standard em-dash ("—") for missing values.',
+        description: 'Fallback string should use standard em-dash ("—") for missing values.'
       });
     }
 
-    // Rule 10: Zero Semantic Color at Rest (ADR 0036 §1)
+    // Rule 10: Zero Semantic Color at Rest (ADR 0036 §1 & ADR 0025 / ECO-0041 leniency)
+    const isFormValidationOrStateKinetic =
+      nearbyContext.includes('status?.type') ||
+      nearbyContext.includes('saveStatus') ||
+      nearbyContext.includes('errorMessage') ||
+      nearbyContext.includes('isRequired') ||
+      nearbyContext.includes('successFlash') ||
+      nearbyContext.includes('variantClasses') ||
+      nearbyContext.includes('data-frontline-pulse') ||
+      nearbyContext.includes('ERROR_HALT') ||
+      nearbyContext.includes('SCAN_SUCCESS') ||
+      lineText.includes('focus-visible:') ||
+      lineText.includes('focus:') ||
+      lineText.includes('data-[highlighted]:');
+
     const hasSemanticColorAtRest =
       /\b(?:bg|text|border)-(?:destructive|success|warning)(?:-foreground)?\b/.test(lineText) &&
       !lineText.includes('hover:') &&
@@ -294,10 +384,13 @@ function auditFile(filePath: string): Violation[] {
       !lineText.includes('alert-dialog') &&
       !lineText.includes('invalid') &&
       !lineText.includes('error') &&
-      !lineText.includes('validation');
+      !lineText.includes('validation') &&
+      !isFormValidationOrStateKinetic;
+
     const isTransientOrAlertComponent =
       isModalOrDialog ||
       lineText.includes('animate-ping') ||
+      lineText.includes('animate-pulse') ||
       relativePath.toLowerCase().includes('alert') ||
       relativePath.toLowerCase().includes('notification') ||
       relativePath.toLowerCase().includes('toast') ||
@@ -305,6 +398,7 @@ function auditFile(filePath: string): Violation[] {
       relativePath.toLowerCase().includes('modal') ||
       relativePath.toLowerCase().includes('popover') ||
       relativePath.toLowerCase().includes('utils');
+
     if (hasSemanticColorAtRest && !isTransientOrAlertComponent) {
       violations.push({
         file: relativePath,
@@ -313,8 +407,7 @@ function auditFile(filePath: string): Violation[] {
         adr: 'ADR 0036 §1',
         severity: 'ERROR',
         snippet: lineText.trim(),
-        description:
-          'Semantic alert color (destructive/success/warning) on a resting surface. Only allowed in toasts, open AlertDialogs, blur-triggered form validation, or hover inside open overflow menus.',
+        description: 'Semantic alert color (destructive/success/warning) on a resting surface. Only allowed in toasts, open AlertDialogs, blur-triggered form validation, or hover inside open overflow menus.'
       });
     }
 
@@ -327,8 +420,7 @@ function auditFile(filePath: string): Violation[] {
         adr: 'ADR 0041',
         severity: 'WARNING',
         snippet: lineText.trim(),
-        description:
-          'Arbitrary shadow value used. Use 5-tier scale: shadow-xs, shadow-sm, shadow-md, shadow-lg, shadow-xl.',
+        description: 'Arbitrary shadow value used. Use 5-tier scale: shadow-xs, shadow-sm, shadow-md, shadow-lg, shadow-xl.'
       });
     }
 
@@ -341,8 +433,7 @@ function auditFile(filePath: string): Violation[] {
         adr: 'ADR 0042 §3',
         severity: 'ERROR',
         snippet: lineText.trim(),
-        description:
-          'Next button must NEVER be disabled based on form invalidity. Allow click-to-validate to focus the first invalid field.',
+        description: 'Next button must NEVER be disabled based on form invalidity. Allow click-to-validate to focus the first invalid field.'
       });
     }
 
@@ -355,8 +446,89 @@ function auditFile(filePath: string): Violation[] {
         adr: 'ADR 0023 / ADR 0031',
         severity: 'ERROR',
         snippet: lineText.trim(),
-        description:
-          'Generic aria-label placeholder used. Replace with explicit, verb-first description.',
+        description: 'Generic aria-label placeholder used. Replace with explicit, verb-first description.'
+      });
+    }
+
+    // Rule 15: ADR 0037 Desktop Header Violation (0px top nav on >=md, except multi-step wizards per ADR 0042)
+    const isWizard = relativePath.toLowerCase().includes('wizard');
+    if (!isWizard && /<header\b[^>]*className=["'][^"']*(?:sticky|fixed)\s+top-0[^"']*["']/.test(lineText)) {
+      if (!/(?:md:hidden|lg:hidden)/.test(lineText)) {
+        violations.push({
+          file: relativePath,
+          line: lineNum,
+          rule: 'Persistent Desktop Header Violation',
+          adr: 'ADR 0037',
+          severity: 'ERROR',
+          snippet: lineText.trim(),
+          description: 'Desktop (>=md) top header must be 0px (hidden) per ADR 0037. TopNav is only allowed on mobile with md:hidden.'
+        });
+      }
+    }
+
+    // Rule 16: Shadowed Local UI Imports
+    const isOmniButlerRepo = relativePath.includes('packages/ui/src');
+    if (!isOmniButlerRepo && /(?:from\s+['"]@\/components\/ui\/[a-zA-Z0-9_-]+['"]|from\s+['"]\.\.?\/ui\/[a-zA-Z0-9_-]+['"])/.test(lineText)) {
+      violations.push({
+        file: relativePath,
+        line: lineNum,
+        rule: 'Shadowed Local UI Import',
+        adr: 'ADR 0015 / Stack Standards',
+        severity: 'WARNING',
+        snippet: lineText.trim(),
+        description: 'Component imported from local shadow ui directory instead of @wiltermoodj/ui. Run `npx @wiltermoodj/configs migrate-ui`.'
+      });
+    }
+
+    // Rule 17: Blocking Modal in Frontline Work Surface (ECO-0041 / ADR 0032)
+    if (
+      isFrontlineWorkSurface &&
+      (/<DialogContent\b/.test(lineText) || /<AlertDialogContent\b/.test(lineText)) &&
+      !content.includes('surfaceModeOverride')
+    ) {
+      violations.push({
+        file: relativePath,
+        line: lineNum,
+        rule: 'Blocking Modal in Frontline Surface',
+        adr: 'ECO-0041 / ADR 0032',
+        severity: 'ERROR',
+        snippet: lineText.trim(),
+        description: 'Blocking modals (Dialog/AlertDialog) are banned in frontline-work surfaces. Use inline ActionCard expansion or inline DisambiguationOverlay.'
+      });
+    }
+
+    // Rule 18: Native Browser Prompt/Alert in UI (ECO-0041)
+    if (
+      filePath.endsWith('.tsx') &&
+      !lineText.trim().startsWith('//') &&
+      !lineText.trim().startsWith('*') &&
+      (/\bwindow\.(?:prompt|confirm|alert)\s*\(/.test(lineText) || /(?<![.\w])prompt\s*\(/.test(lineText))
+    ) {
+      violations.push({
+        file: relativePath,
+        line: lineNum,
+        rule: 'Native Browser Prompt/Alert Banned',
+        adr: 'ECO-0041 / ADR 0032',
+        severity: 'ERROR',
+        snippet: lineText.trim(),
+        description: 'Native window.prompt/confirm/alert is banned in UI components. Use inline ActionCard inputs or AlertDialog in desk-ledger mode.'
+      });
+    }
+
+    // Rule 19: DOM Focus Trap in Frontline Work Surface (ECO-0041)
+    if (
+      isFrontlineWorkSurface &&
+      /\.focus\(\)/.test(lineText) &&
+      nearbyContext.includes('setInterval')
+    ) {
+      violations.push({
+        file: relativePath,
+        line: lineNum,
+        rule: 'DOM Focus Trap in Frontline Surface',
+        adr: 'ECO-0041',
+        severity: 'WARNING',
+        snippet: lineText.trim(),
+        description: 'Polling DOM .focus() trap detected in frontline-work surface. Use document-level useFrontlineStream listener instead.'
       });
     }
   });
@@ -367,7 +539,9 @@ function auditFile(filePath: string): Violation[] {
 function runAudit() {
   const files = getAllFiles(TARGET_DIR);
   const relTargetDir = path.relative(process.cwd(), TARGET_DIR);
-  console.log(`Auditing ${files.length} files in ${relTargetDir}...\n`);
+  if (!isJsonOutput) {
+    console.log(`Auditing ${files.length} files in ${relTargetDir}...\n`);
+  }
 
   const scratchDir = path.resolve(process.cwd(), 'scratch');
   if (!fs.existsSync(scratchDir)) {
@@ -409,10 +583,10 @@ function runAudit() {
     byRule,
     byDir: Object.keys(byDir).map((dir) => ({
       domain: dir,
-      violationCount: byDir[dir].length,
-      violations: byDir[dir],
+      violationCount: (byDir[dir] ?? []).length,
+      violations: byDir[dir] ?? []
     })),
-    violations: allViolations,
+    violations: allViolations
   };
 
   fs.writeFileSync('scratch/design-audit-results.json', JSON.stringify(report, null, 2));
@@ -422,7 +596,7 @@ function runAudit() {
   md += `**Date:** ${new Date().toISOString()}\n`;
   md += `**Target Directory:** \`${relTargetDir}\`\n`;
   md += `**Total Files Audited:** ${files.length}\n`;
-  md += `**Clean Files:** ${files.length - filesWithViolations.size} (${files.length > 0 ? (((files.length - filesWithViolations.size) / files.length) * 100).toFixed(1) : 100}%)\n`;
+  md += `**Clean Files:** ${files.length - filesWithViolations.size} (${files.length > 0 ? ((files.length - filesWithViolations.size) / files.length * 100).toFixed(1) : 100}%)\n`;
   md += `**Files with Violations:** ${filesWithViolations.size}\n`;
   md += `**Total Violations Detected:** ${allViolations.length}\n\n`;
 
@@ -436,9 +610,10 @@ function runAudit() {
   md += `\n## Violation Breakdown by Directory\n\n`;
   md += `| Directory | Violations | Status |\n|---|---|---|\n`;
   Object.keys(byDir)
-    .sort((a, b) => byDir[b].length - byDir[a].length)
+    .sort((a, b) => (byDir[b]?.length ?? 0) - (byDir[a]?.length ?? 0))
     .forEach((dir) => {
-      md += `| \`${dir}\` | ${byDir[dir].length} | ${byDir[dir].length > 0 ? '⚠️ Needs Review' : '✅ Compliant'} |\n`;
+      const count = byDir[dir]?.length ?? 0;
+      md += `| \`${dir}\` | ${count} | ${count > 0 ? '⚠️ Needs Review' : '✅ Compliant'} |\n`;
     });
 
   md += `\n## Detailed Violation Log\n\n`;
@@ -451,7 +626,16 @@ function runAudit() {
   }
 
   fs.writeFileSync('scratch/design-audit-report.md', md);
-  console.log(`Audit complete! Summary written to scratch/design-audit-report.md`);
+
+  if (isJsonOutput) {
+    console.log(JSON.stringify(report, null, 2));
+  } else {
+    console.log(`Audit complete! ${allViolations.length} violation(s) across ${filesWithViolations.size} file(s). Summary written to scratch/design-audit-report.md`);
+  }
+
+  if (isStrict && allViolations.length > 0) {
+    process.exit(1);
+  }
 }
 
 runAudit();

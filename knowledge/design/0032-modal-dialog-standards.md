@@ -1,16 +1,14 @@
 ---
-title: '0032 - Modal & Dialog Standards'
-type: 'adr'
-description: 'Accepted'
-status: 'active'
-last_updated: '2026-07-29T15:30:00Z'
+title: "0032 - Modal & Dialog Standards"
+type: "adr"
+description: "Accepted"
+status: "active"
+last_updated: "2026-07-29T15:30:00Z"
 ---
-
 # 0032 - Modal & Dialog Standards
 
 ## Context
-
-Three dialog components exist. Clear rules must specify dialog selection, dimension constraints, and header and footer anatomy.
+Three dialog components exist (`dialog.tsx`, `alert-dialog.tsx`, `sheet.tsx`) governed by [0041-surface-tier-system.md]. Clear rules must define which component to use, dialog sizing, and header/footer anatomy across the application.
 
 ## Decision
 
@@ -26,6 +24,8 @@ Three dialog components exist. Clear rules must specify dialog selection, dimens
 
 Rule: when in doubt between Dialog and Sheet, prefer **Sheet for read/browse, Dialog for write/confirm**.
 
+> **Task-Intent Scope Boundary (`ECO-0041`):** `Dialog`, `AlertDialog`, and `Sheet` overlays apply to **`desk-ledger`** views (`taskIntent="desk-analysis"` or `"system-configuration"`). Blocking modals are prohibited on `frontline-work` surfaces. Use inline `ChoiceProvider` slots (`1..9`), `StageLifecycleSpec` tiles, and `Obligation` ledgers from `@wiltermoodj/ui/frontline`.
+
 ### 2 — Dialog Size Tiers
 
 - Size | Max width | Use
@@ -38,9 +38,7 @@ Rule: when in doubt between Dialog and Sheet, prefer **Sheet for read/browse, Di
 Current `dialog.tsx` default is `sm:max-w-lg` — this is the `md` tier. Pass `className` to override.
 
 ### 3 — Header Anatomy (required)
-
 Every Dialog must have a `DialogHeader` with:
-
 - `DialogTitle` — specific, noun-first: "Edit Contact", "New Deal", "Delete John Smith?"
 - `DialogDescription` — optional but recommended for forms. Describes scope or consequence
 - Close `×` button — top-right, always present (except `AlertDialog` which has no close ×)
@@ -48,9 +46,7 @@ Every Dialog must have a `DialogHeader` with:
 Title must be ≤5 words. It names the action, not the entity type alone ("Edit Contact", not "Contact").
 
 ### 4 — Footer Anatomy (required)
-
 Every Dialog with actions must have a `DialogFooter`:
-
 - **Button order:** Cancel (left) → Primary action (right). Matches reading order.
 - **Cancel:** Always `outline` variant, always labeled "Cancel" (ADR 0031 §2).
 - **Primary action:** `default` or `destructive` variant depending on nature of action.
@@ -58,30 +54,25 @@ Every Dialog with actions must have a `DialogFooter`:
 - Footer is always sticky — does not scroll out of view. Scrollable content is the body only.
 
 ### 5 — Scrollable Body Rule
-
 - Max height: `max-h-[90vh]` (implemented in `dialog.tsx`).
 - When content exceeds max-height, only the body scrolls — header and footer remain fixed.
 - Scrollable body has `overflow-y-auto` and subtle top/bottom gradient fade to indicate more content.
 
 ### 6 — Sheet (Side Panel) Rules
-
 - Always slides in from the **right** — never left, never bottom (bottom drawer is separate component).
 - Default width: `w-[400px]` to `w-[540px]`. Never wider than 50vw on desktop.
 - Always has a header with title + close ×.
 - Sheet footer (if present) is sticky at the bottom.
 
 ### 7 — Focus Management (supplements ADR 0023)
-
 - On open: focus lands on the first interactive element (first input in forms, Cancel button in AlertDialog).
 - On close: focus returns to the element that triggered the dialog.
 - Focus is trapped inside the dialog while open (Radix handles this natively — do not override).
 
 ### 8 — Nesting Rule
-
 Never nest a Dialog inside another Dialog. If a secondary action inside a modal requires confirmation, use an inline warning message or replace the dialog content — do not stack overlays.
 
 ## Consequences
-
 - Agents and developers have a clear decision tree for which overlay component to use.
 - Header/footer anatomy is consistent across the entire product.
 - Focus management rules prevent keyboard users from getting lost.

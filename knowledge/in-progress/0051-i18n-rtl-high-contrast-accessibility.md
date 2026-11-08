@@ -1,9 +1,9 @@
 ---
-title: 'ADR 0051: Internationalization (i18n), RTL & High-Contrast Support'
-type: 'adr'
-status: 'in-progress'
-description: 'TODO Draft proposal: Standards for CSS logical properties, Right-to-Left (RTL) mirroring, text expansion allowances, and Windows High Contrast Mode.'
-date: '2026-08-20'
+title: "ADR 0051: Internationalization (i18n), RTL & High-Contrast Support"
+type: "adr"
+status: "in-progress"
+description: "TODO Draft proposal: Standards for CSS logical properties, Right-to-Left (RTL) mirroring, text expansion allowances, and Windows High Contrast Mode."
+date: "2026-08-20"
 ---
 
 # ADR 0051: Internationalization (i18n), RTL & High-Contrast Support
@@ -11,13 +11,17 @@ date: '2026-08-20'
 > [!NOTE]
 > **TODO / RFC Draft:** This document is in draft status within `knowledge/in-progress/` and serves as a discussion proposal for future revision and adoption. The specifications below represent proposed guidelines for review, not yet active design system enforcement rules.
 
+## Task-Intent Scope Boundary (`ECO-0041`)
+
+- **All Surfaces (`desk-ledger` & `frontline-work`)**: CSS logical properties (`ms-*`, `me-*`, `ps-*`, `pe-*`, `start-*`, `end-*`) and `@media (forced-colors: active)` fallbacks apply across all execution surfaces.
+- **`frontline-work` Ergonomics (`ECO-0041`)**: Somatic layouts support operator handedness mirroring through `[data-hand="ltr" | "rtl"]` (`SomaticLayoutSpec.handPreference`) and industrial high-contrast `Track 3` (`text-readout-*` `font-mono tabular-nums`) counters.
+
 ## Context
 
-Global deployments and strict accessibility mandates require interfaces that seamlessly support localized text expansion, Right-to-Left (RTL) writing systems (for example,. Arabic, Hebrew), and assistive operating system modes like Windows High Contrast Mode (`forced-colors: active`).
+Global deployments require interfaces that support localized text expansion, Right-to-Left (RTL) writing systems, and assistive OS modes (`forced-colors: active`).
 
 Currently:
-
-1. Physical directional CSS classes (for example,. `mr-4`, `pl-6`, `text-left`) break when switching to RTL.
+1. Physical directional CSS classes (for example, `mr-4`, `pl-6`, `text-left`) break when switching to RTL.
 2. Layout containers have fixed pixel widths that break when German or French translations expand by 30–40%.
 3. Borderless surface designs (ADR 0041) lose visual separation when operating systems force custom contrast colors.
 
@@ -37,23 +41,21 @@ All layout and spacing code must adopt CSS logical properties instead of physica
 ### 2 — Icon & Asset RTL Mirroring Rules
 
 - **Mirrorable Icons:** Directional navigation arrows (`ArrowLeft`, `ChevronRight`), undo/redo icons, and reading direction indicators must mirror automatically in RTL (`rtl:turn-180` or `rtl:scale-x-[-1]`).
-- **Non-Mirrorable Icons:** Media playback controls (`Play`, `Pause`), clocks, checkmarks, search magnifying glasses, and hardware icons (for example,. phone, battery) must **never** mirror.
+- **Non-Mirrorable Icons:** Media playback controls (`Play`, `Pause`), clocks, checkmarks, search magnifying glasses, and hardware icons (for example, phone, battery) must **never** mirror.
 
 ### 3 — Text Expansion Budget (i18n Headroom)
 
-- **Button & Label Widths:** Fixed-width buttons (for example,. `w-32`) are strictly prohibited for labeled buttons. Use `min-w-[80px]` with `px-4` padding to accommodate German/French string expansions of up to 40%.
+- **Button & Label Widths:** Fixed-width buttons (for example, `w-32`) are strictly prohibited for labeled buttons. Use `min-w-[80px]` with `px-4` padding to accommodate German/French string expansions of up to 40%.
 - **Table Column Min-Widths:** Set explicit `min-w-[120px]` on text columns to prevent awkward two-character word-wrapping when localized.
 
 ### 4 — Windows High Contrast & Forced Colors Mode
 
 When `@media (forced-colors: active)` is triggered:
-
 - Operating systems strip custom OKLCH background colors and box shadows.
 - Cards, dialogs, and popovers must enforce a system border fallback:
   ```css
   @media (forced-colors: active) {
-    .surface-card,
-    .surface-panel {
+    .surface-card, .surface-panel {
       border: 1px solid ButtonBorder !important;
     }
     :focus-visible {
@@ -66,7 +68,7 @@ When `@media (forced-colors: active)` is triggered:
 
 1. **No Hardcoded Left/Right Insets:** Do not write `left-0` or `pl-4` in shared primitives. Always use `start-0` and `ps-4`.
 2. **No Text Truncation Without Tooltips:** Truncated localized strings must always provide hover tooltips revealing the full string.
-3. **No Concatenated Translated Strings:** Never assemble UI sentences using string concatenation (for example,. `"Showing " + count + " items"`). Use parameterized translation keys (for example,. `t('pagination.showing', { count })`).
+3. **No Concatenated Translated Strings:** Never assemble UI sentences using string concatenation (for example, `"Showing " + count + " items"`). Use parameterized translation keys (for example, `t('pagination.showing', { count })`).
 
 ## Open Questions for Discussion
 

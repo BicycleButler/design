@@ -1,9 +1,9 @@
 ---
-title: 'ADR 0046: Tabs, Segmented Controls & Secondary Navigation Standards'
-type: 'adr'
-status: 'in-progress'
-description: 'TODO Draft proposal: Interaction standards for tabs, segmented controls, active indicators, tablist keyboard navigation, and responsive overflow.'
-date: '2026-08-20'
+title: "ADR 0046: Tabs, Segmented Controls & Secondary Navigation Standards"
+type: "adr"
+status: "in-progress"
+description: "TODO Draft proposal: Interaction standards for tabs, segmented controls, active indicators, tablist keyboard navigation, and responsive overflow."
+date: "2026-08-20"
 ---
 
 # ADR 0046: Tabs, Segmented Controls & Secondary Navigation Standards
@@ -11,12 +11,16 @@ date: '2026-08-20'
 > [!NOTE]
 > **TODO / RFC Draft:** This document is in draft status within `knowledge/in-progress/` and serves as a discussion proposal for future revision and adoption. The specifications below represent proposed guidelines for review, not yet active design system enforcement rules.
 
+## Task-Intent Scope Boundary (`ECO-0041`)
+
+- **`desk-ledger` (`taskIntent: "desk-analysis" | "system-configuration"`)**: Multi-tab headers (`Underline Tabs`, `Segmented Control`, and filter chip toolbars) apply to `desk-ledger` views.
+- **`frontline-work` (`taskIntent: "work-execution" | "triage-disposition"`)**: Do not mount multi-tab navigation bars inside `frontline-work` execution canvases. Use `StageLifecycleSpec` (`Q14`) stage pills in the passive ledger zone. Use the header `surfaceModeOverride` toggle (`preserveSessionAcrossToggle: true`, `Q18`) to switch modes.
+
 ## Context
 
 Web applications frequently require switching between sub-views, filtering content domains, or organizing complex detail panes without triggering full-page route reloads.
 
 Currently, applications inconsistently mix underline tabs, button pill groups, full segmented controls, and secondary sub-navigation links. Furthermore:
-
 1. Keyboard accessibility (WAI-ARIA `tablist` / `tab` / `tabpanel`) is frequently neglected.
 2. Layout shifts occur when switching between tabs of unequal height.
 3. Tab counts often tempt developers to reintroduce deprecated pill badges (violating ADR 0035).
@@ -27,22 +31,26 @@ Currently, applications inconsistently mix underline tabs, button pill groups, f
 ### 1 — Taxonomy & Usage Decision Matrix
 
 - Control Type | Visual Metaphor | Primary Use Case | Sizing & Placement
-- **Underline Tabs** | Flat text with animated bottom indicator line (`h-0.5 bg-primary`) | Page-level or section-level view switching (for example,. Overview, Activity, Settings) | Contained within section header. Full width or auto-width
-- **Segmented Control** | Inset pill track (`bg-muted/50 p-1 rounded-lg`) with sliding active card (`bg-background shadow-xs`) | High-frequency view mode toggling (for example,. Grid against List, Month against Week against Day) | Max 4–5 short options. Fixed height 32px or 36px
-- **Pill / Filter Chips** | Independent clickable chips with border and subtle background | Multi-select or single-select filtering (for example,. Categories, Tags) | Used within filter toolbars (ADR 0039). Wraps or scrolls
+- **Underline Tabs** | Flat text with animated bottom indicator line (`h-0.5 bg-primary`) | Page-level or section-level view switching (for example, Overview, Activity, Settings) | Contained within section header. Full width or auto-width
+- **Segmented Control** | Inset pill track (`bg-muted/50 p-1 rounded-lg`) with sliding active card (`bg-background shadow-xs`) | High-frequency view mode toggling (for example, Grid against List, Month against Week against Day) | Max 4–5 short options. Fixed height 32px or 36px
+- **Pill / Filter Chips** | Independent clickable chips with border and subtle background | Multi-select or single-select filtering (for example, Categories, Tags) | Used within filter toolbars (ADR 0039). Wraps or scrolls
 
 ### 2 — Underline Tabs Specification
 
-- **Tab Strip Mock:** Overview (active with bottom indicator), Activity (12), Documents, Settings
+```
+Overview    Activity (12)    Documents    Settings
+```
 
 - **Container:** Borderless at rest. Subtle bottom separator `border-b border-border/40`.
 - **Tab Item:** `text-sm font-medium`, resting state `text-muted-foreground hover:text-foreground transition-colors duration-150`.
 - **Active State:** `text-foreground font-semibold`. The active indicator is an absolute positioned bottom bar `h-[2px] bg-primary rounded-full` transitioning through CSS transform / `framer-motion` layoutId.
-- **Tab Counts (ADR 0035 Compliance):** Counts must be appended as neutral text within the label, for example,. `Activity (12)` or `<span className="text-xs text-muted-foreground/70 ml-1.5 font-normal">12</span>`. Static colored badge pills remain strictly forbidden.
+- **Tab Counts (ADR 0035 Compliance):** Counts must be appended as neutral text within the label, for example, `Activity (12)` or `<span className="text-xs text-muted-foreground/70 ml-1.5 font-normal">12</span>`. Static colored badge pills remain strictly forbidden.
 
 ### 3 — Segmented Control Specification
 
-- Control Mock: [ List View (Active) ] | Grid View | Kanban
+```
+[  List View  ]   Grid View   Kanban
+```
 
 - **Track:** `inline-flex items-center bg-muted/60 p-1 rounded-lg h-9 border border-border/20`.
 - **Item:** `px-3 py-1 text-xs font-medium rounded-md transition-all duration-200`.
@@ -63,15 +71,9 @@ Currently, applications inconsistently mix underline tabs, button pill groups, f
 
 - **Horizontal Scroll with Fade Masks:** On viewports `< 640px` (`sm`), tablists must not wrap to multi-line. Instead, enable horizontal scrolling (`overflow-x-auto no-scrollbar`) with progressive edge fade masks:
   ```css
-  mask-image: linear-gradient(
-    to right,
-    transparent,
-    black 16px,
-    black calc(100% - 16px),
-    transparent
-  );
+  mask-image: linear-gradient(to right, transparent, black 16px, black calc(100% - 16px), transparent);
   ```
-- **Segmented Control Collapse:** A segmented control exceeding mobile container width must collapse into a Select dropdown trigger.
+- **Segmented Control Collapse:** Collapse wide segmented controls on mobile into a `<Select>` dropdown trigger.
 
 ## Anti-Patterns & Prohibitions
 
