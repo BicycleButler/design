@@ -37,10 +37,16 @@ done
 TARGET_DIR="$(cd "$TARGET_DIR" 2>/dev/null && pwd || { mkdir -p "$TARGET_DIR" && cd "$TARGET_DIR" && pwd; })"
 
 # Detect whether we are running from inside a clone of the design repo
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
-REPO_CANDIDATE="$(cd "$SCRIPT_DIR/.." >/dev/null 2>&1 && pwd)"
+SCRIPT_DIR=""
+if [ -n "${BASH_SOURCE[0]:-}" ]; then
+  SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
+fi
+REPO_CANDIDATE=""
+if [ -n "$SCRIPT_DIR" ]; then
+  REPO_CANDIDATE="$(cd "$SCRIPT_DIR/.." >/dev/null 2>&1 && pwd)"
+fi
 
-if [ -f "$REPO_CANDIDATE/SKILL.md" ] && [ -f "$REPO_CANDIDATE/RULES.md" ] && [ -d "$REPO_CANDIDATE/knowledge/design" ]; then
+if [ -n "$REPO_CANDIDATE" ] && [ -f "$REPO_CANDIDATE/SKILL.md" ] && [ -f "$REPO_CANDIDATE/RULES.md" ] && [ -d "$REPO_CANDIDATE/knowledge/design" ]; then
   SOURCE_DIR="$REPO_CANDIDATE"
 fi
 
@@ -55,37 +61,43 @@ fi
 echo "[design-install] Validating frontmatter ..."
 FRONTMATTER_SCRIPT="$SOURCE_DIR/scripts/ci/validate-frontmatter.ts"
 LINK_SCRIPT="$SOURCE_DIR/scripts/ci/validate-links.ts"
-if [ -f "$FRONTMATTER_SCRIPT" ]; then
+if [ -f "$FRONTMATTER_SCRIPT" ] && command -v npx >/dev/null 2>&1; then
   if ! npx -y tsx "$FRONTMATTER_SCRIPT" "$SOURCE_DIR" >/dev/null 2>&1; then
     echo "[design-install] ERROR: frontmatter validation failed"
     npx -y tsx "$FRONTMATTER_SCRIPT" "$SOURCE_DIR" || true
     exit 1
   fi
-else
+elif [ ! -f "$FRONTMATTER_SCRIPT" ]; then
   echo "[design-install] SKIP: frontmatter validator not found in source"
+else
+  echo "[design-install] SKIP: npx not available, skipping frontmatter validation"
 fi
 
 echo "[design-install] Validating links ..."
-if [ -f "$LINK_SCRIPT" ]; then
+if [ -f "$LINK_SCRIPT" ] && command -v npx >/dev/null 2>&1; then
   if ! npx -y tsx "$LINK_SCRIPT" "$SOURCE_DIR" >/dev/null 2>&1; then
     echo "[design-install] ERROR: link validation failed"
     npx -y tsx "$LINK_SCRIPT" "$SOURCE_DIR" || true
     exit 1
   fi
-else
+elif [ ! -f "$LINK_SCRIPT" ]; then
   echo "[design-install] SKIP: link validator not found in source"
+else
+  echo "[design-install] SKIP: npx not available, skipping link validation"
 fi
 
 echo "[design-install] Verifying ADR integrity ..."
 VERIFY_ADR_SCRIPT="$SOURCE_DIR/scripts/verify-design-adrs.ts"
-if [ -f "$VERIFY_ADR_SCRIPT" ]; then
+if [ -f "$VERIFY_ADR_SCRIPT" ] && command -v npx >/dev/null 2>&1; then
   if ! (cd "$SOURCE_DIR" && npx -y tsx "$VERIFY_ADR_SCRIPT") >/dev/null 2>&1; then
     echo "[design-install] ERROR: ADR verification failed"
     (cd "$SOURCE_DIR" && npx -y tsx "$VERIFY_ADR_SCRIPT") || true
     exit 1
   fi
-else
+elif [ ! -f "$VERIFY_ADR_SCRIPT" ]; then
   echo "[design-install] SKIP: ADR verifier not found in source"
+else
+  echo "[design-install] SKIP: npx not available, skipping ADR verification"
 fi
 
 if [ "$CHECK_ONLY" = true ]; then

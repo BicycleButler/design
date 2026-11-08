@@ -21,9 +21,27 @@ Run the following command from the root of the project you want to install the s
 curl -fsSL https://raw.githubusercontent.com/BicycleButler/design/main/scripts/install-design-skill.sh | bash
 ```
 
-Alternatively, if you have cloned the `design` repository locally:
+Alternatively, you can use process substitution:
 
 ```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/BicycleButler/design/main/scripts/install-design-skill.sh)
+```
+
+To target a specific project directory:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/BicycleButler/design/main/scripts/install-design-skill.sh | bash -s -- /path/to/project
+```
+
+### Install from a Local Clone
+
+If you have cloned the `design` repository locally:
+
+```bash
+# From within the cloned design repository
+bash scripts/install-design-skill.sh /path/to/target/project
+
+# Or run directly pointing to the current directory
 bash /path/to/design/scripts/install-design-skill.sh .
 ```
 
@@ -34,7 +52,7 @@ The installer places the guidelines and agent skill directly into your project:
 - **Project Root**:
   - `RULES.md` — Agent design system rules and routing matrix
 - **Agent Customizations (`.agents/`)**:
-  - `.agents/rules/design-rules.md` — Automatic directory rule discovery
+  - `.agents/rules/RULES.md` — Workspace design rules and routing matrix
   - `.agents/skills/design/SKILL.md` — Core design skill instructions and checklist
   - `.agents/skills/design/REFERENCE.md` — Token lookup tables and specifications
   - `.agents/skills/design/MIGRATION.md` — Migration guide and strict typing adapter for legacy UI
@@ -43,9 +61,21 @@ The installer places the guidelines and agent skill directly into your project:
 
 ## Validate
 
+Inside this repository:
+
 ```bash
+npm test
+# Or run individual validation scripts
 npx -y tsx scripts/ci/validate-frontmatter.ts .
 npx -y tsx scripts/ci/validate-links.ts .
+npx -y tsx scripts/verify-design-adrs.ts
+```
+
+Inside a project with the skill installed:
+
+```bash
+npx -y tsx .agents/skills/design/scripts/ci/validate-frontmatter.ts .agents/skills/design
+npx -y tsx .agents/skills/design/scripts/ci/validate-links.ts .agents/skills/design
 ```
 
 ## Quick Preview
@@ -74,7 +104,7 @@ curl -fsSL https://raw.githubusercontent.com/BicycleButler/design/main/scripts/i
 To remove the installed design skill and rules from your project, run from your project root:
 
 ```bash
-rm -rf .agents/skills/design .agents/rules/design-rules.md RULES.md
+rm -rf .agents/skills/design .agents/rules/RULES.md RULES.md
 ```
 
 ## License
